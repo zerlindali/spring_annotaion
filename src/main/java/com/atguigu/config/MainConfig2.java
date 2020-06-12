@@ -1,10 +1,9 @@
 package com.atguigu.config;
 
-import com.atguigu.bean.Car;
-import com.atguigu.bean.Color;
-import com.atguigu.bean.Hair;
-import com.atguigu.bean.Person;
+import com.atguigu.bean.*;
 import com.atguigu.condition.LinuxCondition;
+import com.atguigu.condition.MyImportBeanDefinitionRegistrar;
+import com.atguigu.condition.MyImportSelector;
 import com.atguigu.condition.WindowsCondition;
 import org.springframework.context.annotation.*;
 
@@ -16,7 +15,7 @@ import org.springframework.context.annotation.*;
 // 类中组件统一设置，满足当前条件，这个类中配置的所有bean才能生效
 @Conditional({WindowsCondition.class})
 @Configuration
-@Import({Color.class, Car.class, Hair.class})
+@Import({MyImportSelector.class, MyImportBeanDefinitionRegistrar.class})
 // 导入组件，id默认是组件的全类名
 public class MainConfig2 {
 
@@ -74,5 +73,16 @@ public class MainConfig2 {
      * 3). @Import[快速给容器中导入一个组件]
      *      1). @Import(要导入到容器中的组件)：容器中就会自动注册这个组件，id默认是全类名
      *      2). ImportSelector: 返回需要导入的组件的全类名数组：
+     *      3). ImportBeanDefinitionRegistrar:
+     *              手动注册bean到容器
+     * 4). 使用Spring提供的FactoryBean(工厂bean)
+     *      1). 默认获取到的是工厂bean调用getObject()创建的对象
+     *      2). 要获取工厂bean本身，我们需要给id前面加一个&
+     *          &colorFactoryBean
+     *          或者直接通过类型获取。
      */
+    @Bean
+    public ColorFactoryBean colorFactoryBean(){
+        return new ColorFactoryBean();
+    }
 }
