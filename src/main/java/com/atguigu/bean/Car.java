@@ -1,6 +1,7 @@
 package com.atguigu.bean;
 
 import lombok.Data;
+import org.springframework.stereotype.Component;
 
 /**
  * @author ZerlindaLi create at 2020/5/28 15:25
@@ -8,6 +9,7 @@ import lombok.Data;
  * @description Car
  */
 @Data
+@Component
 public class Car {
     public Car() {
         System.out.println("Car..............constructor");
