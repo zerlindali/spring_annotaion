@@ -10,7 +10,7 @@ public class MyImportBeanDefinitionRegistrar implements ImportBeanDefinitionRegi
     /**
      * AnnotationMetadata 当前类的注解信息
      * BeanDefinitionRegistry BeanDefinition注册类
-     *      把所有需要添加到容器中的bean,调用ImportBeanDefinitionRegistrar.registerBeanDefinitions
+     *      把所有需要添加到容器中的bean,调用ImportBeanDefinitionRegistrar.registerBeanDefinitions手工注册进来
      * @param importingClassMetadata
      * @param registry
      */

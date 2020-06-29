@@ -26,7 +26,102 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
  * 5. 将切入类和业务逻辑类（目标方法所在类）都加入到容器中
  * 6. 必须告诉Spring,哪个类是切换类（给切面类上加一个注解）
  * [7]. 给配置类中加@EnableAspectJAutoProxy【开启基于注解的aop模式】
- * 8. 在Spring中有很多@EnableXXX功能
+ * 8. 在Spring中有很多@EnableXXX功能；
+ *
+ * 三步：
+ *  1): 将业务逻辑组件和切面类都加入到容器中：告诉Spring哪个是切面类(@Aspect)
+ *  2): 在切面类上的每一个通知方法上标注通知注解，告诉Spring何时何地运行(切入点表达式)
+ *  3): 开启基于注解的AOP模式：@EnableAspectJAutoProxy
+ *
+ * AOP原理：【看给容器中注册了什么组件，这个组件什么时候工作，这个组件工作的时候的功能是什么】
+ *      @EnableAspectJAutoProxy
+ * 1. @EnableAspectJAutoProxy是什么？
+ *      @Import(AspectJAutoProxyRegistrar.class) 给容器中导入AspectJAutoProxyRegistrar
+ *          利用AspectJAutoProxyRegistrar自定义给容器中注册bean：BeanDefinetion
+ *          internalAutoProxyCreator = AnnotationAwareAspectJAutoProxyCreator
+ *      给容器中注册一个AnnotationAwareAspectJAutoProxyCreator：
+ * 2. AnnotationAwareAspectJAutoProxyCreator:
+ *      AnnotationAwareAspectJAutoProxyCreator
+ *          ->AspectJAwareAdvisorAutoProxyCreator
+ *              ->AspectJAwareAdvisorAutoProxyCreator
+ *                  ->AbstractAdvisorAutoProxyCreator
+ *                      ->AbstractAutoProxyCreator
+ *                              implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware
+ *                          关注后置处理器（在bean初始化完成前后做的事情）、自动装配BeanFactory
+ *
+ * AbstractAutoProxyCreator.setBeanFactory()
+ * AbstractAutoProxyCreator有后置处理器的逻辑：
+ *
+ * AbstractAdvisorAutoProxyCreator.setBeanFactory()->initBeanFactory()
+ *
+ * AnnotationAwareAspectJAutoProxyCreator.initBeanFactory()
+ *
+ * 流程：
+ *  【AnnotationConfigApplicationContext】
+ *  1). 传入配置类，创建IOC容器
+ *  2). 注册配置类，调用refresh(), 刷新容器：
+ *  【AbstractApplicationContext】
+ *  3). registerBeanPostProcessors(beanFactory); 注册bean的后置处理器来方便拦截bean的创建
+ *      1). 先获取ioc容器中已经定义了需要创建对象的所有BeanPostProcessor
+ *      2). 给容器中加别的BeanPostProcessor
+ *      3). 优先注册实现了PriorityOrdered接口的BeanPostProcessor;
+ *      4). 再给容器中注册实现了Ordered接口的BeanPostProcessor;
+ *      5). 注册没实现优先级接口的BeanPostProcessor;
+ *      6). 注册BeanPostProcessor,实际上就是创建BeanPostProcessor对象，保存在容器中;
+ *              【PostProcessorRegistrationDelegate】
+ *              *******************************************************
+ *              beanFactory.getBean(ppName, BeanPostProcessor.class);
+ *                  ->AbstractBeanFactory.doGetBean(name, requiredType, null, false);
+ *                  **********************************************************************
+ *                      ->AbstractBeanFactory.createBean(beanName, mbd, args);->AbstractAutowireCapableBeanFactory.createBean(beanName, mbd, args);
+ *                          ->AbstractAutowireCapableBeanFactory.resolveBeforeInstantiation(beanName, mbdToUse);
+ *                          ->AbstractAutowireCapableBeanFactory.doCreateBean(beanName, mbdToUse, args);
+ *
+ *              创建internalAutoProxyCreator的BeanPostProcessor【AnnotationAwareAspectJAutoProxyCreator】
+ *              1). 创建Bean的实例
+ *              2). populateBean: 给bean的各种属性赋值
+ *              3). initializeBean: 初始化Bean
+ *                  1). invokeAwareMethods(): 处理Aware接口的方法回调. 调用AbstractAdvisorAutoProxyCreator.setBeanFactory()
+ *                  2). applyBeanPostProcessorsBeforeInitialization(): 后置处理器的postProcessBeforeInitialization()
+ *                  3). invokeInitMethods(): 执行自定义的初始化方法
+ *                  4). applyBeanPostProcessorsAfterInitialization(): 后置处理器的postProcessAfterInitialization()
+ *              4). BeanPostprocessor(AnnotationAwareAspectJAutoProxyCreator)创建成功 -->aspectJAdvisorsBuilder
+ *      7). 把BeanPostProcessor注册到BeanFactory中：
+ *          beanFactory.addBeanPostProcessor(beanPostProcessor)
+ *===========================以上是创建和注册AnnotationAwareAspectJAutoProxyCreator的过程=================================
+ *
+ *                             AnnotationAwareAspectJAutoProxyCreator => InstantiationAwareBeanPostProcessor
+ *  【AbstractApplicationContext】
+ *  4). finishBeanFactoryInitialization(beanFactory);完成BeanFactory初始化工作；创建剩下的单实例Bean
+ *      beanFactory.preInstantiateSingletons();->[ConfigurableListableBeanFactory]->[DefaultListableBeanFactory]
+ *      1). 获取容器中所用的Bean, 依次创建对象getBean(beanName);
+ *      *****************************************************************
+ *          AbstractBeanFactory.getBean()->AbstractBeanFactory.doGetBean()->getSingleton()
+ *                        ->AbstractBeanFactory.createBean(beanName, mbd, args);->AbstractAutowireCapableBeanFactory.createBean(beanName, mbd, args);
+ *                            ->AbstractAutowireCapableBeanFactory.resolveBeforeInstantiation(beanName, mbdToUse);
+ *                            ->AbstractAutowireCapableBeanFactory.doCreateBean(beanName, mbdToUse, args);
+ *      *****************************************************************
+ *      2). 创建Bean
+ *          【AnnotationAwareAspectJAutoProxyCreator，在所有Bean创建之前会有一个拦截，
+ *              AnnotationAwareAspectJAutoProxyCreator创建时，InstantiationAwareBeanPostProcessor会调用】
+ *          1). 先从缓存中获取当前Bean, 如果能获取到，说明Bean是之前被创建过的，直接使用，否则再创建；
+ *              只要创建好的Bean都会被缓存存起来
+ *          2). createBean(); 创建bean；AnnotationAwareAspectJAutoProxyCreator会在任何Bean创建之前先尝试返回bean的实例
+ *              【BeanPostProcessor是在Bean对象创建完成初始化前后调用的】
+ *              【InstantiationAwareBeanPostProcessor是在创建Bean实例之前，先尝试用后置处理器返回对象】
+ *              1). resolveBeforeInstantiation(beanName, mbdToUse); 解析BeforeInstantiation
+ *                  希望后置处理器在此能返回一个代理对象；如果能返回代理对象，就使用；如果不能，就继续
+ *                  1). 后置处理器先尝试返回对象，如果是InstantiationAwareBeanPostProcessor，
+ *                      就执行postProcessBeforeInstantiation
+ *                      bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
+ * 					    if (bean != null) {
+ * 						    bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
+ *                      }
+ *              2). doCreateBean(beanName, mbdToUse, args); 真正的去创建一个Bean实例，和3.6流程一样
+ *              3).
+ *
+ * AnnotationAwareAspectJAutoProxyCreator【InstantiationAwareBeanPostProcessor】
+ * 1). 每一个Bean创建之前，调用就执行postProcessBeforeInstantiation()
  */
 @Configuration
 @EnableAspectJAutoProxy

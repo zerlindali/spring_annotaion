@@ -6,10 +6,11 @@ import org.junit.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 public class IOCTest_Aop {
-    AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext(MainConfigOfAOP.class);
+
 
     @Test
     public void test01(){
+        AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext(MainConfigOfAOP.class);
         MathCalculator calculator = applicationContext.getBean(MathCalculator.class);
 
 //        1. 这个对象不要自己创建
