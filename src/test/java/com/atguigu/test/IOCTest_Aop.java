@@ -21,4 +21,11 @@ public class IOCTest_Aop {
         System.out.println("--------------------------");
         applicationContext.close();
     }
+
+    /**
+     *
+     */
+    public void test(){
+        
+    }
 }
