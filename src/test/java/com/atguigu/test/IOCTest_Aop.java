@@ -19,7 +19,6 @@ public class IOCTest_Aop {
 
         calculator.div(11,3);
         System.out.println("--------------------------");
-        calculator.div(1,0);
         applicationContext.close();
     }
 }

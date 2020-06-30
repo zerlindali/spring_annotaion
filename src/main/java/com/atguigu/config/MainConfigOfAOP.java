@@ -122,6 +122,31 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
  *
  * AnnotationAwareAspectJAutoProxyCreator【InstantiationAwareBeanPostProcessor】
  * 1). 每一个Bean创建之前，调用就执行postProcessBeforeInstantiation()
+ *      关心MathCalculator和LogAspect的创建
+ *      1). 判断当前bean是否在advisedBeans中（保存了所有需要增强bean）
+ *      2). 判断当前bean是否是基础类型Advice,Pointcut,Advisor,AopInfrastructureBean,
+ *            或者是否是切面(@Aspect)
+ *      3). 是否需要跳过
+ *            1). 获取候选的增强器(切面里面的通知方法) 【List<Advisor>candidateAdvisors</Advisor>】
+ *                  每一个封装的通知方法的增强器是InstantiationModelAwarePointcutAdvisor,
+ *                  判断每一个增强器是否是AspectJPointcutAdvisor类型的：返回true
+ *            2). 永远返回false
+ * 2). 创建对象
+ * postProcessAfterInitialization:
+ *      return wrapIfNecessary(bean, beanName, cacheKey); // 包装如果需要的情况下
+ *      1). 获取当前bean的所有增强器(通知方法) Object[] specificInterceptors
+ *              1. 找到候选的所有增强器(找哪些通知方法是需要切入当前bean方法的)
+ *              2. 获取到能在bean使用的增强器。
+ *              3. 给增强器排序
+ *      2). 保存当前bean在advisedBeans中；
+ *      3). 如果当前bean需要增强，创建当前bean的代理对象；
+ *          1). 获取所有增强器(通知方法)
+ *          2). 保存到proxyFactory
+ *          3). 创建代理对象：Spring自动决定
+ *               JdkDynamicAopProxy(config):jdk动态代理;
+ *               ObjenesisCglibAopProxy(config):cglib的动态代理；
+ *      4). 给容器中返回当前组件使用cglib增强了的代理对象
+ *      5). 以后容器中获取到的就是这个组件的代理对象，执行目标方法的时候，代理对象就会执行通知方法的流程
  */
 @Configuration
 @EnableAspectJAutoProxy
